@@ -191,6 +191,8 @@ $skillStats = db()->query("
       <?php endif; ?>
     </div>
   </div>
+
+  <?php include __DIR__ . '/../includes/footer.php'; ?>
 </div>
 </body>
 </html>

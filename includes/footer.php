@@ -1,3 +1,3 @@
 <div class="site-footer">
-  © 2025 English Learning Platform · Designed for adaptive education
+  © <?php echo date("Y"); ?> English Learning Platform · Designed for adaptive education
 </div>

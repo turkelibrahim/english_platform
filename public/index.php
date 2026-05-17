@@ -149,6 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php endif; ?>
       </div>
     </div>
+    <?php include __DIR__ . '/../includes/footer.php'; ?>
   </div>
 
   <!-- About Us Modal -->

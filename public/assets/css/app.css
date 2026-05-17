@@ -511,3 +511,14 @@ a{color: var(--primary); text-decoration:none}
   .nb-spine{ display:none; }
   .nb-list{ max-height:32vh; }
 }
+
+/* Footer */
+.site-footer {
+  margin-top: 60px;
+  margin-bottom: 24px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+  opacity: 0.65;
+}
+

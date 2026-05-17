@@ -222,6 +222,7 @@ $tasks = $st->fetchAll();
     <?php endif; ?>
   </div>
 
+  <?php include __DIR__ . '/../includes/footer.php'; ?>
 </div>
 </body>
 </html>
