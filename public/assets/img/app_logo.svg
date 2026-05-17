@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" fill="none">
+  <defs>
+    <linearGradient id="g" x1="18" y1="16" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#178582"/>
+      <stop offset="0.55" stop-color="#0A1828"/>
+      <stop offset="1" stop-color="#BFA181"/>
+    </linearGradient>
+    <filter id="s" x="-20" y="-20" width="168" height="168" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#g)" filter="url(#s)"/>
+  <!-- simple open-book icon -->
+  <path d="M35 44.5c8.2-3.7 16.3-4.8 29-1.3 12.7-3.5 20.8-2.4 29 1.3v45.3c-8.2-3.4-16.3-4.2-29 0-12.7-4.2-20.8-3.4-29 0V44.5Z" fill="rgba(255,255,255,0.18)"/>
+  <path d="M35 46.8c7.7-3.4 15.3-4.4 27.5-1.2v42.9c-12.2-3.8-19.8-3.1-27.5 0V46.8Z" fill="rgba(255,255,255,0.26)"/>
+  <path d="M93 46.8c-7.7-3.4-15.3-4.4-27.5-1.2v42.9c12.2-3.8 19.8-3.1 27.5 0V46.8Z" fill="rgba(255,255,255,0.26)"/>
+  <path d="M64 43.2v48.8" stroke="rgba(255,255,255,0.55)" stroke-width="3" stroke-linecap="round"/>
+  <!-- spark -->
+  <path d="M64 30l3.2 8.8L76 42l-8.8 3.2L64 54l-3.2-8.8L52 42l8.8-3.2L64 30Z" fill="#EEF4ED" opacity="0.95"/>
+</svg>

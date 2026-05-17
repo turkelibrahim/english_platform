@@ -1,0 +1,183 @@
+/* Quote of the Day overlay (Welcome popup)
+   Designed to look good in both light/dark themes.
+*/
+
+.dq-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 22px;
+}
+
+.dq-overlay[hidden]{
+  display:none;
+}
+
+/* Background image + soft gradients */
+.dq-overlay::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(10,24,40,.88) url('../img/positive_bg.svg');
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1.05);
+  pointer-events: none;
+}
+
+.dq-overlay::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(23,133,130,.10);
+  opacity: .95;
+  pointer-events: none;
+}
+
+.dq-card{
+  position: relative;
+  width: min(720px, 100%);
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 26px 70px rgba(0,0,0,.55);
+  transform: translateY(12px) scale(.985);
+  opacity: 0;
+  transition: transform .34s ease, opacity .34s ease;
+  background: rgba(238,244,237,.94);
+  color: #0A1828;
+}
+
+body[data-theme="dark"] .dq-card{
+  background: rgba(10,24,40,.92);
+  color: #EEF4ED;
+  border: 1px solid rgba(141,169,196,.24);
+  box-shadow: 0 30px 80px rgba(0,0,0,.62);
+}
+
+.dq-card.dq-show{
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.dq-top{
+  padding: 18px 18px 0 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.dq-badge{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  border: 1px solid rgba(141,169,196,.35);
+  background: rgba(141,169,196,.22);
+}
+
+.dq-close{
+  border: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  line-height: 1;
+  color: inherit;
+  opacity: .88;
+  background: transparent;
+}
+
+.dq-close:hover{
+  opacity: 1;
+  background: rgba(141,169,196,.20);
+}
+
+.dq-content{
+  padding: 14px 20px 20px 20px;
+}
+
+.dq-hello{
+  margin-top: 10px;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.dq-title{
+  margin: 10px 0 10px 0;
+  font-size: 18px;
+  font-weight: 900;
+  opacity: .92;
+}
+
+.dq-quote{
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.45;
+  font-weight: 900;
+}
+
+@media (max-width: 520px){
+  .dq-quote{ font-size: 20px; }
+}
+
+.dq-author{
+  margin-top: 10px;
+  font-weight: 800;
+  opacity: .9;
+}
+
+.dq-foot{
+  margin-top: 14px;
+  font-size: 12px;
+  opacity: .75;
+}
+
+.dq-divider{
+  height: 1px;
+  margin-top: 14px;
+  background: rgba(141,169,196,.30);
+}
+
+.dq-actions{
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.dq-ok-btn{
+  min-width: 120px;
+}
+
+.dq-emoji-layer{
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.dq-emoji{
+  position: absolute;
+  transform: translate(0,0);
+  opacity: 1;
+  font-size: 18px;
+  animation: dq-fly 700ms ease-out forwards;
+}
+
+@keyframes dq-fly{
+  to{
+    transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+    opacity: 0;
+  }
+}

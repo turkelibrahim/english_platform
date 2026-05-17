@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <radialGradient id="fade" cx="50%" cy="45%" r="75%">
+      <stop offset="0%" stop-color="#07121f" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#07121f" stop-opacity="0.65"/>
+    </radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.2" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <style>
+      .l{stroke:#178582;stroke-opacity:.38;stroke-width:1.4}
+      .n{fill:#178582;fill-opacity:.85}
+      .s{fill:#BFA181;fill-opacity:.7}
+      .t{fill:#EEF4ED;fill-opacity:.58;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;font-weight:700;font-size:18px;letter-spacing:.2px}
+      .tt{fill:#EEF4ED;fill-opacity:.42;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;font-weight:700;font-size:14px;letter-spacing:.2px}
+    </style>
+  </defs>
+
+  <!-- subtle dark wash so it works on both light/dark themes -->
+  <rect width="1600" height="900" fill="url(#fade)"/>
+
+  <!-- network lines -->
+  <g filter="url(#glow)">
+    <path class="l" d="M145 190 L340 110 L470 210 L650 150 L820 240 L960 130 L1110 200"/>
+    <path class="l" d="M260 690 L420 560 L640 610 L820 520 L1030 620 L1230 510 L1400 650"/>
+    <path class="l" d="M210 420 L360 360 L520 440 L690 360 L890 410 L1040 340 L1260 400"/>
+    <path class="l" d="M520 440 L420 560"/>
+    <path class="l" d="M690 360 L650 150"/>
+    <path class="l" d="M890 410 L820 240"/>
+    <path class="l" d="M1030 620 L1110 200"/>
+
+    <!-- nodes -->
+    <circle class="n" cx="145" cy="190" r="5"/>
+    <circle class="n" cx="340" cy="110" r="6"/>
+    <circle class="n" cx="470" cy="210" r="5"/>
+    <circle class="n" cx="650" cy="150" r="6"/>
+    <circle class="n" cx="820" cy="240" r="5"/>
+    <circle class="n" cx="960" cy="130" r="5"/>
+    <circle class="n" cx="1110" cy="200" r="6"/>
+
+    <circle class="n" cx="260" cy="690" r="6"/>
+    <circle class="n" cx="420" cy="560" r="5"/>
+    <circle class="n" cx="640" cy="610" r="6"/>
+    <circle class="n" cx="820" cy="520" r="5"/>
+    <circle class="n" cx="1030" cy="620" r="6"/>
+    <circle class="n" cx="1230" cy="510" r="5"/>
+    <circle class="n" cx="1400" cy="650" r="6"/>
+
+    <circle class="s" cx="210" cy="420" r="5"/>
+    <circle class="s" cx="360" cy="360" r="5"/>
+    <circle class="s" cx="520" cy="440" r="5"/>
+    <circle class="s" cx="690" cy="360" r="5"/>
+    <circle class="s" cx="890" cy="410" r="5"/>
+    <circle class="s" cx="1040" cy="340" r="5"/>
+    <circle class="s" cx="1260" cy="400" r="5"/>
+  </g>
+
+  <!-- floating labels (like the screenshot) -->
+  <text class="t" x="1190" y="270">Grammar</text>
+  <text class="tt" x="1225" y="295">Tenses</text>
+
+  <text class="t" x="80" y="470">Writing</text>
+  <text class="tt" x="105" y="495">Notes</text>
+
+  <text class="t" x="70" y="250">Speaking</text>
+  <text class="tt" x="95" y="275">Fluency</text>
+
+  <text class="t" x="1320" y="740">Listening</text>
+  <text class="tt" x="1345" y="765">Audio</text>
+
+  <text class="t" x="210" y="760">Vocabulary</text>
+  <text class="tt" x="245" y="785">Words</text>
+</svg>

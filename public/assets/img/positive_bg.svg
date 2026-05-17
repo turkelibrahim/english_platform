@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1600" height="900" viewBox="0 0 1600 900" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#134074"/>
+      <stop offset="0.55" stop-color="#13315C"/>
+      <stop offset="1" stop-color="#0B2545"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#8DA9C4" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#EEF4ED" stop-opacity="0.35"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="50%" r="55%">
+      <stop offset="0" stop-color="#EEF4ED" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#EEF4ED" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+  </defs>
+
+  <!-- Base gradient -->
+  <rect width="1600" height="900" fill="url(#g1)"/>
+
+  <!-- Soft sun glow -->
+  <circle cx="1280" cy="160" r="220" fill="url(#sun)" filter="url(#blur)"/>
+
+  <!-- Floating blobs -->
+  <g filter="url(#blur)">
+    <circle cx="260" cy="170" r="160" fill="#8DA9C4" opacity="0.38"/>
+    <circle cx="520" cy="320" r="140" fill="#EEF4ED" opacity="0.18"/>
+    <circle cx="980" cy="520" r="210" fill="#8DA9C4" opacity="0.22"/>
+    <circle cx="1340" cy="620" r="180" fill="#EEF4ED" opacity="0.12"/>
+  </g>
+
+  <!-- Wave layer -->
+  <path d="M0,680 C220,610 420,640 620,710 C850,790 1080,820 1600,740 L1600,900 L0,900 Z" fill="url(#g2)"/>
+  <path d="M0,730 C260,670 470,705 690,770 C930,840 1170,860 1600,800 L1600,900 L0,900 Z" fill="#EEF4ED" opacity="0.10"/>
+
+  <!-- Tiny sparkles -->
+  <g opacity="0.28">
+    <circle cx="140" cy="110" r="3" fill="#EEF4ED"/>
+    <circle cx="390" cy="90" r="2" fill="#EEF4ED"/>
+    <circle cx="720" cy="120" r="2" fill="#EEF4ED"/>
+    <circle cx="930" cy="210" r="3" fill="#EEF4ED"/>
+    <circle cx="1120" cy="110" r="2" fill="#EEF4ED"/>
+    <circle cx="1460" cy="240" r="3" fill="#EEF4ED"/>
+    <circle cx="1220" cy="360" r="2" fill="#EEF4ED"/>
+    <circle cx="260" cy="430" r="2" fill="#EEF4ED"/>
+  </g>
+</svg>

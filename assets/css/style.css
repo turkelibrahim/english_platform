@@ -1,0 +1,142 @@
+/* =========================
+   PALETTE (ONLY)
+========================= */
+:root{
+  --yale:#178582;
+  --oxford:#0A1828;
+  --prussian:#07121f;
+  --powder:#BFA181;
+  --mint:#EEF4ED;
+
+  --text: var(--mint);
+  --muted: rgba(238,244,237,.72);
+  --border: rgba(191,161,129,.24);
+  --shadow: 0 30px 60px rgba(11,37,69,.55);
+}
+
+/* =========================
+   RESET & BASE
+========================= */
+*{ margin:0; padding:0; box-sizing:border-box }
+
+body{
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+  color: var(--text);
+  background: var(--oxford);
+  overflow-x: hidden;
+}
+
+/* =========================
+   BACKGROUND AI TEXT
+========================= */
+body::before{
+  content: "learn adapt improve practice progress ai english language future grammar vocabulary speaking listening writing";
+  position: fixed;
+  inset: 0;
+  font-size: 28px;
+  line-height: 3.2;
+  word-spacing: 24px;
+  color: rgba(238,244,237,.05);
+  transform: rotate(-12deg);
+  pointer-events: none;
+  white-space: pre-wrap;
+}
+
+/* =========================
+   LAYOUT
+========================= */
+.container{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 100px 24px;
+  position: relative;
+}
+
+.dashboard-title{
+  font-size: 2.6rem;
+  margin-bottom: 50px;
+}
+
+.dashboard-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 30px;
+}
+
+/* =========================
+   CARD
+========================= */
+.card{
+  background: rgba(10,24,40,.66);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 30px;
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.card:hover{
+  transform: translateY(-10px);
+  box-shadow: 0 55px 100px rgba(11,37,69,.72);
+}
+
+.card-icon{ font-size: 2.4rem; margin-bottom: 16px; }
+.card h3{ font-size: 1.35rem; margin-bottom: 12px; }
+
+.card p{
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.card a{
+  display: inline-block;
+  margin-top: 20px;
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--powder);
+}
+
+.card a:hover{ text-decoration: underline; color: var(--mint); }
+
+/* =========================
+   HEADER (legacy pages)
+========================= */
+.site-header{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  background: rgba(10,24,40,.78);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(191,161,129,.22);
+}
+
+.site-header__inner{
+  max-width:1200px;
+  margin:auto;
+  padding:18px 24px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+}
+
+.site-nav{ display:flex; gap:20px; flex-wrap:wrap; }
+.site-nav a{ color: var(--mint); text-decoration:none; opacity:.92; font-weight:700; }
+.site-nav a:hover{ opacity:1; }
+.site-nav a.logout{ color: var(--powder); }
+
+/* =========================
+   FOOTER
+========================= */
+.footer,
+.site-footer{
+  margin-top: 120px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: rgba(238,244,237,.55);
+}

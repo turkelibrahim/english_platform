@@ -1,0 +1,556 @@
+<?php
+require_once __DIR__ . '/../includes/rbac.php';
+$u = require_role('student');
+
+// Use account creation date as the beginning of analytics.
+$createdAtStr = (string)($u['created_at'] ?? 'now');
+$createdAt = new DateTime($createdAtStr);
+$today = new DateTime('now');
+$daysSince = (int)$createdAt->diff($today)->format('%a');
+
+// --- Progress analytics chart series (Total vs Correct) ---
+$groupMode = 'day'; // day | week | month
+if ($daysSince > 365) $groupMode = 'month';
+else if ($daysSince > 90) $groupMode = 'week';
+
+$attemptLabels = [];
+$attemptTotals = [];
+$attemptCorrect = [];
+$attemptPeriodLabel = '';
+
+if ($groupMode === 'day') {
+  $attemptPeriodLabel = 'Day';
+  $startDate = new DateTime($createdAt->format('Y-m-d'));
+  $endDate = new DateTime($today->format('Y-m-d'));
+
+  $map = [];
+  $q = db()->prepare("SELECT DATE(created_at) d, COUNT(*) total, SUM(is_correct) correct\n                    FROM question_attempts\n                    WHERE user_id=? AND attempt_type='practice' AND created_at >= ?\n                    GROUP BY DATE(created_at)\n                    ORDER BY d ASC");
+  $q->execute([$u['id'], $createdAt->format('Y-m-d H:i:s')]);
+  foreach ($q->fetchAll() as $r) {
+    $k = (string)$r['d'];
+    $map[$k] = ['total'=>(int)$r['total'], 'correct'=>(int)$r['correct']];
+  }
+
+  $it = clone $startDate;
+  while ($it <= $endDate) {
+    $k = $it->format('Y-m-d');
+    $attemptLabels[] = $it->format('M j');
+    $attemptTotals[] = $map[$k]['total'] ?? 0;
+    $attemptCorrect[] = $map[$k]['correct'] ?? 0;
+    $it->modify('+1 day');
+  }
+} elseif ($groupMode === 'week') {
+  $attemptPeriodLabel = 'Week';
+  $startWeek = new DateTime($createdAt->format('Y-m-d'));
+  $startWeek->modify('monday this week');
+  $endWeek = new DateTime($today->format('Y-m-d'));
+  $endWeek->modify('monday this week');
+
+  $map = [];
+  $q = db()->prepare("SELECT YEARWEEK(created_at, 1) yw, COUNT(*) total, SUM(is_correct) correct\n                    FROM question_attempts\n                    WHERE user_id=? AND attempt_type='practice' AND created_at >= ?\n                    GROUP BY YEARWEEK(created_at, 1)\n                    ORDER BY yw ASC");
+  $q->execute([$u['id'], $createdAt->format('Y-m-d H:i:s')]);
+  foreach ($q->fetchAll() as $r) {
+    $yw = (int)$r['yw'];
+    $map[$yw] = ['total'=>(int)$r['total'], 'correct'=>(int)$r['correct']];
+  }
+
+  $it = clone $startWeek;
+  while ($it <= $endWeek) {
+    $yw = (int)$it->format('oW'); // ISO week-year + week
+    $attemptLabels[] = $it->format('Y') . ' W' . $it->format('W');
+    $attemptTotals[] = $map[$yw]['total'] ?? 0;
+    $attemptCorrect[] = $map[$yw]['correct'] ?? 0;
+    $it->modify('+1 week');
+  }
+} else { // month
+  $attemptPeriodLabel = 'Month';
+  $startMonth = new DateTime($createdAt->format('Y-m-01'));
+  $endMonth = new DateTime($today->format('Y-m-01'));
+
+  $map = [];
+  $q = db()->prepare("SELECT DATE_FORMAT(created_at,'%Y-%m-01') m, COUNT(*) total, SUM(is_correct) correct\n                    FROM question_attempts\n                    WHERE user_id=? AND attempt_type='practice' AND created_at >= ?\n                    GROUP BY DATE_FORMAT(created_at,'%Y-%m')\n                    ORDER BY m ASC");
+  $q->execute([$u['id'], $createdAt->format('Y-m-d H:i:s')]);
+  foreach ($q->fetchAll() as $r) {
+    $k = (string)$r['m'];
+    $map[$k] = ['total'=>(int)$r['total'], 'correct'=>(int)$r['correct']];
+  }
+
+  $it = clone $startMonth;
+  while ($it <= $endMonth) {
+    $k = $it->format('Y-m-01');
+    $attemptLabels[] = $it->format('M Y');
+    $attemptTotals[] = $map[$k]['total'] ?? 0;
+    $attemptCorrect[] = $map[$k]['correct'] ?? 0;
+    $it->modify('+1 month');
+  }
+}
+
+// Practice accuracy + Skill accuracy (from account creation)
+$st = db()->prepare("SELECT COUNT(*) total, SUM(is_correct) correct FROM question_attempts WHERE user_id=? AND attempt_type='practice' AND created_at >= ?");
+$st->execute([$u['id'], $createdAt->format('Y-m-d H:i:s')]);
+$r = $st->fetch();
+$practiceTotal = (int)($r['total'] ?? 0);
+$practiceCorrect = (int)($r['correct'] ?? 0);
+$practiceWrong = max(0, $practiceTotal - $practiceCorrect);
+$practiceAccuracy = $practiceTotal>0 ? round(($practiceCorrect/$practiceTotal)*100) : 0;
+
+$skillLabels = [];
+$skillAcc = [];
+$skillQ = db()->prepare("SELECT q.skill, COUNT(*) total, SUM(qa.is_correct) correct\n                       FROM question_attempts qa\n                       JOIN questions q ON q.id=qa.question_id\n                       WHERE qa.user_id=? AND qa.attempt_type='practice' AND qa.created_at >= ?\n                       GROUP BY q.skill\n                       ORDER BY q.skill");
+$skillQ->execute([$u['id'], $createdAt->format('Y-m-d H:i:s')]);
+foreach ($skillQ->fetchAll() as $row) {
+  $total = (int)($row['total'] ?? 0);
+  $correct = (int)($row['correct'] ?? 0);
+  $acc = $total>0 ? round(($correct/$total)*100) : 0;
+  $skillLabels[] = $row['skill'];
+  $skillAcc[] = $acc;
+}
+
+// Achievements: badges + notifications
+$badgesQ = db()->prepare("SELECT b.title, b.description, ub.earned_at\n                         FROM user_badges ub\n                         JOIN badges b ON b.id=ub.badge_id\n                         WHERE ub.user_id=?\n                         ORDER BY ub.earned_at DESC\n                         LIMIT 12");
+$badgesQ->execute([$u['id']]);
+$earnedBadges = $badgesQ->fetchAll();
+
+$notifQ = db()->prepare("SELECT title, message, is_read, created_at\n                        FROM notifications\n                        WHERE user_id=?\n                        ORDER BY created_at DESC\n                        LIMIT 10");
+$notifQ->execute([$u['id']]);
+$notifications = $notifQ->fetchAll();
+
+// Existing progress page stats (also keep within account lifetime)
+$st = db()->prepare("SELECT COUNT(*) total, SUM(is_correct) correct FROM question_attempts WHERE user_id=? AND created_at >= ?");
+$st->execute([$u['id'], $createdAt->format('Y-m-d H:i:s')]);
+$row = $st->fetch();
+$total = (int)($row['total'] ?? 0);
+$correct = (int)($row['correct'] ?? 0);
+$wrong = max(0, $total - $correct);
+$accuracy = $total>0 ? round(($correct/$total)*100) : 0;
+
+$topicQ = db()->prepare("SELECT q.topic, COUNT(*) total, SUM(qa.is_correct) correct\n                       FROM question_attempts qa\n                       JOIN questions q ON q.id=qa.question_id\n                       WHERE qa.user_id=? AND qa.created_at >= ?\n                       GROUP BY q.topic\n                       ORDER BY total DESC");
+$topicQ->execute([$u['id'], $createdAt->format('Y-m-d H:i:s')]);
+$topicRows = $topicQ->fetchAll();
+
+$recentQ = db()->prepare("SELECT q.topic, q.skill, qa.is_correct, qa.created_at\n                        FROM question_attempts qa\n                        JOIN questions q ON q.id=qa.question_id\n                        WHERE qa.user_id=? AND qa.created_at >= ?\n                        ORDER BY qa.created_at DESC\n                        LIMIT 12");
+$recentQ->execute([$u['id'], $createdAt->format('Y-m-d H:i:s')]);
+$recentRows = $recentQ->fetchAll();
+
+function pct2($n){ return (string)round($n,0).'%'; }
+?>
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Student · Progress</title>
+  <link rel="stylesheet" href="<?=BASE_URL?>/public/assets/css/app.css">
+</head>
+<body data-theme="<?=htmlspecialchars($u['theme'] ?? 'light')?>">
+<div class="container">
+  <?php $navPage="Progress"; $navActive="progress"; include __DIR__ . '/../includes/partials/student_nav.php'; ?>
+
+  <!-- Moved from Profile: Progress analytics + Achievements -->
+  <div class="grid" style="margin-top:18px; grid-template-columns:1fr; gap:14px">
+    <div class="card">
+      <div class="row" style="justify-content:space-between; align-items:baseline">
+        <div>
+          <div class="h1" style="font-size:18px">Progress analytics</div>
+          <div class="muted" style="margin-top:6px">From account creation (<?=htmlspecialchars((new DateTime($createdAtStr))->format('Y-m-d'))?>) · grouped by <?=htmlspecialchars($attemptPeriodLabel)?></div>
+        </div>
+        <div class="pill">Practice accuracy: <?= (int)$practiceAccuracy ?>%</div>
+      </div>
+      <div class="hr"></div>
+
+      <div class="grid" style="grid-template-columns:1fr 1fr; gap:14px">
+        <div class="card" style="margin:0; box-shadow:none">
+          <div class="muted">Attempts (Total vs Correct)</div>
+          <div style="height:10px"></div>
+          <canvas id="chartAttempts" height="150"></canvas>
+          <div class="muted" style="margin-top:10px"><?= (int)$practiceCorrect ?> correct · <?= (int)$practiceWrong ?> wrong · <?= (int)$practiceTotal ?> total</div>
+        </div>
+        <div class="card" style="margin:0; box-shadow:none">
+          <div class="muted">Accuracy by skill</div>
+          <div style="height:10px"></div>
+          <canvas id="chartSkill" height="150"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="justify-content:space-between; align-items:baseline">
+        <div>
+          <div class="h1" style="font-size:18px">Achievements</div>
+        </div>
+        <div class="pill">Points: <?= (int)($u['points'] ?? 0) ?></div>
+      </div>
+      <div class="hr"></div>
+
+      <div class="grid" style="grid-template-columns:1fr 1fr; gap:14px">
+        <div class="card" style="margin:0; box-shadow:none">
+          <div style="font-weight:900">Badges</div>
+          <div class="hr"></div>
+
+          <?php if(!$earnedBadges): ?>
+            <div class="toast">No badges yet. Keep practicing!</div>
+          <?php else: ?>
+            <div style="display:grid; gap:10px">
+              <?php foreach($earnedBadges as $b): ?>
+                <div class="card" style="margin:0; box-shadow:none">
+                  <div style="font-weight:900">🏅 <?=htmlspecialchars($b['title'])?></div>
+                  <div class="muted" style="margin-top:6px"><?=htmlspecialchars($b['description'])?></div>
+                  <div class="muted" style="margin-top:6px; font-size:12px">Earned: <?=htmlspecialchars($b['earned_at'])?></div>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </div>
+
+        <div class="card" style="margin:0; box-shadow:none">
+          <div style="font-weight:900">Notifications</div>
+          <div class="hr"></div>
+
+          <?php if(!$notifications): ?>
+            <div class="toast">No notifications yet.</div>
+          <?php else: ?>
+            <div style="display:grid; gap:10px">
+              <?php foreach($notifications as $n): ?>
+                <div class="card" style="margin:0; box-shadow:none">
+                  <div class="row" style="justify-content:space-between; align-items:baseline">
+                    <div style="font-weight:900"><?=htmlspecialchars($n['title'])?></div>
+                    <div class="pill"><?= ((int)$n['is_read']===1) ? 'Read' : 'New' ?></div>
+                  </div>
+                  <div class="muted" style="margin-top:6px"><?=htmlspecialchars($n['message'])?></div>
+                  <div class="muted" style="margin-top:6px; font-size:12px"><?=htmlspecialchars($n['created_at'])?></div>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Existing Progress page content -->
+  <div class="grid" style="margin-top:18px">
+    <div class="card">
+      <div class="h1">Overall</div>
+      <div class="hr"></div>
+      <div style="line-height:1.9">
+        Total attempts: <b><?= $total ?></b><br>
+        Correct: <b><?= $correct ?></b><br>
+        Wrong: <b><?= $wrong ?></b><br>
+        Accuracy: <b><?= $accuracy ?>%</b>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="h1">Top topics</div>
+      <div class="hr"></div>
+      <?php if(!$topicRows): ?>
+        <div class="toast">No data yet. Start practicing!</div>
+      <?php else: ?>
+        <table class="tbl">
+          <tr><th>Topic</th><th>Total</th><th>Accuracy</th></tr>
+          <?php foreach($topicRows as $t):
+            $tTotal = (int)$t['total'];
+            $tCorrect = (int)$t['correct'];
+            $tAcc = $tTotal>0 ? round(($tCorrect/$tTotal)*100) : 0;
+          ?>
+            <tr>
+              <td><?=htmlspecialchars($t['topic'])?></td>
+              <td><?= $tTotal ?></td>
+              <td><?= $tAcc ?>%</td>
+            </tr>
+          <?php endforeach; ?>
+        </table>
+      <?php endif; ?>
+    </div>
+
+    <div class="card">
+      <div class="h1">Recent</div>
+      <div class="hr"></div>
+      <?php if(!$recentRows): ?>
+        <div class="toast">No recent activity.</div>
+      <?php else: ?>
+        <table class="tbl">
+          <tr><th>Topic</th><th>Skill</th><th>Result</th><th>Time</th></tr>
+          <?php foreach($recentRows as $r): ?>
+            <tr>
+              <td><?=htmlspecialchars($r['topic'])?></td>
+              <td><?=htmlspecialchars($r['skill'])?></td>
+              <td><?= ((int)$r['is_correct']===1) ? '✅' : '❌' ?></td>
+              <td><?=htmlspecialchars($r['created_at'])?></td>
+            </tr>
+          <?php endforeach; ?>
+        </table>
+      <?php endif; ?>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // NOTE: Charts used to rely on Chart.js CDN. In some student environments
+  // internet/CDN access is blocked, causing empty charts. We draw charts
+  // with a tiny local canvas renderer instead (no external deps).
+
+  const attemptLabels = <?= json_encode($attemptLabels, JSON_UNESCAPED_UNICODE) ?>;
+  const attemptTotals = <?= json_encode($attemptTotals, JSON_UNESCAPED_UNICODE) ?>;
+  const attemptCorrect = <?= json_encode($attemptCorrect, JSON_UNESCAPED_UNICODE) ?>;
+  const skillLabels = <?= json_encode($skillLabels, JSON_UNESCAPED_UNICODE) ?>;
+  const skillAcc = <?= json_encode($skillAcc, JSON_UNESCAPED_UNICODE) ?>;
+
+  function cssVar(name, fallback){
+    const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    return v || fallback;
+  }
+
+  function fitCanvas(canvas){
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(10, Math.floor(rect.width));
+    const h = Math.max(10, Math.floor(rect.height));
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    return {ctx, w, h};
+  }
+
+  function drawAxes(ctx, w, h, pad, yMax){
+    const border = cssVar('--border', 'rgba(0,0,0,.2)');
+    const muted = cssVar('--muted', 'rgba(0,0,0,.55)');
+    ctx.clearRect(0,0,w,h);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = border;
+    // axes
+    ctx.beginPath();
+    ctx.moveTo(pad.l, pad.t);
+    ctx.lineTo(pad.l, h - pad.b);
+    ctx.lineTo(w - pad.r, h - pad.b);
+    ctx.stroke();
+
+    // y ticks (0, 50%, 100%)
+    ctx.fillStyle = muted;
+    ctx.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    const ticks = 3;
+    for(let i=0;i<ticks;i++){
+      const frac = i/(ticks-1);
+      const y = (h - pad.b) - frac * ((h - pad.b) - pad.t);
+      const val = Math.round(frac * yMax);
+      ctx.beginPath();
+      ctx.moveTo(pad.l - 4, y);
+      ctx.lineTo(pad.l, y);
+      ctx.stroke();
+      ctx.fillText(String(val), 6, y + 4);
+    }
+  }
+
+  function drawLineSeries(ctx, w, h, pad, values, yMax, color){
+    const n = values.length;
+    if(n === 0) return;
+    const x0 = pad.l;
+    const x1 = w - pad.r;
+    const y0 = h - pad.b;
+    const y1 = pad.t;
+    const step = n > 1 ? (x1 - x0) / (n - 1) : 0;
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    for(let i=0;i<n;i++){
+      const x = x0 + i * step;
+      const v = Number(values[i] || 0);
+      const y = y0 - (yMax ? (v / yMax) : 0) * (y0 - y1);
+      if(i===0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Ensure even a single data point is visible.
+    ctx.fillStyle = color;
+    for(let i=0;i<n;i++){
+      const x = x0 + i * step;
+      const v = Number(values[i] || 0);
+      const y = y0 - (yMax ? (v / yMax) : 0) * (y0 - y1);
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  function drawLegendLine(ctx, x, y, color, text){
+    const textColor = cssVar('--muted', 'rgba(0,0,0,.55)');
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x+18, y);
+    ctx.stroke();
+    ctx.fillStyle = textColor;
+    ctx.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    ctx.fillText(text, x+26, y+4);
+  }
+
+  function drawLineChart(canvas, labels, series){
+    if(!canvas) return;
+    const {ctx, w, h} = fitCanvas(canvas);
+    const pad = {l: 40, r: 12, t: 12, b: 26};
+    let yMax = 0;
+    for(const s of series) for(const v of s.data) yMax = Math.max(yMax, Number(v||0));
+    yMax = Math.max(1, yMax);
+    drawAxes(ctx, w, h, pad, yMax);
+
+    // x labels (show up to 6)
+    const muted = cssVar('--muted', 'rgba(0,0,0,.55)');
+    ctx.fillStyle = muted;
+    ctx.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    const x0 = pad.l;
+    const x1 = w - pad.r;
+    const n = labels.length;
+    const maxLabels = 6;
+    const stride = n <= maxLabels ? 1 : Math.ceil(n / maxLabels);
+    for(let i=0;i<n;i+=stride){
+      const x = n>1 ? x0 + (i/(n-1))*(x1-x0) : x0;
+      ctx.fillText(String(labels[i]||''), Math.max(0, x-16), h - 8);
+    }
+
+    // series lines
+    for(const s of series){
+      drawLineSeries(ctx, w, h, pad, s.data, yMax, s.color);
+    }
+
+    // legend
+    let lx = pad.l;
+    const ly = pad.t + 10;
+    for(const s of series){
+      drawLegendLine(ctx, lx, ly, s.color, s.label);
+      lx += 140;
+    }
+  }
+
+  // Grouped bar chart for time series: Total vs Correct per period.
+  function drawGroupedBarChart(canvas, labels, totals, corrects){
+    if(!canvas) return;
+    const {ctx, w, h} = fitCanvas(canvas);
+    const pad = {l: 40, r: 12, t: 12, b: 26};
+
+    const n = Math.max(1, labels.length);
+    let yMax = 0;
+    for(const v of totals) yMax = Math.max(yMax, Number(v||0));
+    yMax = Math.max(1, yMax);
+
+    drawAxes(ctx, w, h, pad, yMax);
+
+    const x0 = pad.l;
+    const x1 = w - pad.r;
+    const y0 = h - pad.b;
+    const y1 = pad.t;
+
+    const groupW = (x1 - x0) / n;
+    const gap = 4;
+    const barW = Math.max(6, Math.min(22, groupW * 0.32));
+
+    const totalColor = cssVar('--primary', '#134074');
+    const correctColor = cssVar('--powder', '#8DA9C4');
+    const text = cssVar('--muted', 'rgba(0,0,0,.55)');
+
+    for(let i=0;i<labels.length;i++){
+      const cx = x0 + i * groupW + groupW/2;
+      const t = Math.max(0, Number(totals[i]||0));
+      const c = Math.max(0, Number(corrects[i]||0));
+
+      const th = (Math.min(yMax, t) / yMax) * (y0 - y1);
+      const ch = (Math.min(yMax, c) / yMax) * (y0 - y1);
+
+      // total (left)
+      ctx.fillStyle = totalColor;
+      ctx.fillRect(cx - gap/2 - barW, y0 - th, barW, th);
+
+      // correct (right)
+      ctx.fillStyle = correctColor;
+      ctx.fillRect(cx + gap/2, y0 - ch, barW, ch);
+    }
+
+    // x labels (show up to 6)
+    ctx.fillStyle = text;
+    ctx.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+    const maxLabels = 6;
+    const stride = labels.length <= maxLabels ? 1 : Math.ceil(labels.length / maxLabels);
+    for(let i=0;i<labels.length;i+=stride){
+      const cx = x0 + i * groupW + groupW/2;
+      const lbl = String(labels[i]||'');
+      ctx.fillText(lbl, Math.max(0, cx - 16), h - 8);
+    }
+
+    // legend
+    drawLegendLine(ctx, pad.l, pad.t + 10, totalColor, 'Total');
+    drawLegendLine(ctx, pad.l + 110, pad.t + 10, correctColor, 'Correct');
+  }
+
+  function drawBarChart(canvas, labels, values, yMax){
+    if(!canvas) return;
+    const {ctx, w, h} = fitCanvas(canvas);
+    const pad = {l: 40, r: 12, t: 12, b: 40};
+    yMax = Math.max(1, Number(yMax || 100));
+    drawAxes(ctx, w, h, pad, yMax);
+    const primary = cssVar('--primary', '#178582');
+    const text = cssVar('--muted', 'rgba(0,0,0,.55)');
+
+    const x0 = pad.l;
+    const x1 = w - pad.r;
+    const y0 = h - pad.b;
+    const y1 = pad.t;
+    const n = Math.max(1, labels.length);
+    const groupW = (x1 - x0) / n;
+    const gap = 10;
+    const barW = Math.max(10, Math.min(60, Math.floor(groupW * 0.62)));
+
+    for(let i=0;i<labels.length;i++){
+      const v = Math.max(0, Math.min(yMax, Number(values[i]||0)));
+      const bh = (v / yMax) * (y0 - y1);
+      const x = x0 + i * groupW + (groupW - barW)/2;
+      const y = y0 - bh;
+      ctx.fillStyle = primary;
+      ctx.fillRect(x, y, barW, bh);
+
+      // value label
+      ctx.fillStyle = text;
+      ctx.font = '12px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial';
+      ctx.fillText(String(v) + '%', x + 4, Math.max(12, y - 6));
+
+      ctx.fillStyle = text;
+      const lbl = String(labels[i]||'');
+      if(labels.length <= 4){
+        ctx.fillText(lbl.length>14 ? (lbl.slice(0,13)+'…') : lbl, x, h - 10);
+      } else {
+        ctx.save();
+        ctx.translate(x + Math.min(10, barW/2), h - 10);
+        ctx.rotate(-0.35);
+        ctx.fillText(lbl.length>14 ? (lbl.slice(0,13)+'…') : lbl, -10, 0);
+        ctx.restore();
+      }
+    }
+  }
+
+  function renderAll(){
+    drawGroupedBarChart(
+      document.getElementById('chartAttempts'),
+      attemptLabels,
+      attemptTotals,
+      attemptCorrect
+    );
+    drawBarChart(
+      document.getElementById('chartSkill'),
+      skillLabels,
+      skillAcc,
+      100
+    );
+  }
+
+  window.addEventListener('resize', () => {
+    // debounce-ish: redraw after layout stabilizes
+    clearTimeout(window.__progressResize);
+    window.__progressResize = setTimeout(renderAll, 120);
+  });
+  renderAll();
+</script>
+</body>
+</html>
