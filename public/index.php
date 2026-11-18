@@ -124,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="row">
               <input class="input" name="full_name" placeholder="Full name" required>
             </div><br>
-            <input class="input" name="username" placeholder="Username (unique, e.g. elif_k)" required><br><br>
+            <input class="input" name="username" placeholder="Username (unique, e.g. student_user)" required><br><br>
             <input class="input" type="email" name="email" placeholder="Email" required><br><br>
             <input class="input" type="password" name="password" placeholder="Password (min 6)" required><br><br>
           <label class="muted">Profile photo (optional)</label>

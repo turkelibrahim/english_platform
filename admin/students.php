@@ -126,7 +126,7 @@ $students = $stList->fetchAll();
       <div class="h1">Find student by username</div>
 <div class="hr"></div>
       <form method="get" action="<?=BASE_URL?>/admin/student_view.php">
-        <input class="input" name="username" placeholder="username (e.g. elif_k)" required><br><br>
+        <input class="input" name="username" placeholder="username (e.g. student_user)" required><br><br>
         <button class="btn primary" style="width:100%">Open profile</button>
       </form>
       <div class="hr"></div>
